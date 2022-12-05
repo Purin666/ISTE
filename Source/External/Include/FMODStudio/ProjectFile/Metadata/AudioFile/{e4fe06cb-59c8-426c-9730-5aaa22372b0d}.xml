@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{e4fe06cb-59c8-426c-9730-5aaa22372b0d}">
+		<property name="assetPath">
+			<value>Segment3.mp3</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>48</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>12.888</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{5c661b2d-312a-490d-906a-d743f5817d1a}</destination>
+		</relationship>
+	</object>
+</objects>

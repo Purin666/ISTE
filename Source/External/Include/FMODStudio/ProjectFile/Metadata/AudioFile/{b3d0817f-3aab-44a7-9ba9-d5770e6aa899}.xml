@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{b3d0817f-3aab-44a7-9ba9-d5770e6aa899}">
+		<property name="assetPath">
+			<value>Level1_Saw_112bpm.mp3</value>
+		</property>
+		<property name="isStreaming">
+			<value>true</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>48</value>
+		</property>
+		<property name="channelCount">
+			<value>2</value>
+		</property>
+		<property name="length">
+			<value>4.3200000000000003</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{5c661b2d-312a-490d-906a-d743f5817d1a}</destination>
+		</relationship>
+	</object>
+</objects>

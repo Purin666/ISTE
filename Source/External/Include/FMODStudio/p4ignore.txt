@@ -1,0 +1,6 @@
+#FMOD
+.cache/
+.restore/
+.restore1/
+.unsaved/
+.user/
