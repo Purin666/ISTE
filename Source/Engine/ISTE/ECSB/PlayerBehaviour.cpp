@@ -145,8 +145,8 @@ bool CanAttack(const CU::Vec3f& aPos, const CU::Vec3f& aOtherPos)
 		box.myMin = grid[i].myPosition - (grid[i].mySize / 2.f);
 		box.myMax = grid[i].myPosition + (grid[i].mySize / 2.f);
 
-		line.myFrom.y = 0;
-		line.myTo.y = 0;
+		//line.myFrom.y = 0;
+		//line.myTo.y = 0;
 
 		if (CU::LineBoxIntersection(line, box))
 		{
@@ -197,7 +197,7 @@ bool CanAttack(const CU::Vec3f& aPos, const CU::Vec3f& aOtherPos)
 		CU::Vec3f size = model->myAABB.myMax - model->myAABB.myMin;
 		CU::Vec3f midPoint = model->myAABB.myMin + (size / 2.f);
 
-		size = size * entityTransform->myScale;
+		//size = size * entityTransform->myScale;
 
 		recalcedMin = midPoint - (size / 2.f);
 		recalcedMax = midPoint + (size / 2.f);
