@@ -53,6 +53,9 @@ const int ISTE::NavMesh::FindTriangleIndexFromPos(const CU::Vec3f& aPos, ISTE::N
     int closestIndex = -1;
     float currDistance = 0.f;
     float closestDistance = FLT_MAX;
+
+    DebugDrawer& drawer = Context::Get()->myGraphicsEngine->GetDebugDrawer();
+
     for (size_t i = 0; i < tris.size(); i++)
     {
         //if (ISTE::NAVAccuratePointInTriangle(tris[i].vertices[0], tris[i].vertices[1], tris[i].vertices[2], aPos)) // replaced with using indices below //Mathias
@@ -62,14 +65,28 @@ const int ISTE::NavMesh::FindTriangleIndexFromPos(const CU::Vec3f& aPos, ISTE::N
         // TODO: Maybe rework this to just send in an array of 3 vertices or a NavMeshTriangle // Mathias
         if (ISTE::NAVAccuratePointInTriangle(a, b, c, aPos))
             return tris[i].index;
-        
-        currDistance = (aPos - tris[i].Center()).LengthSqr();
+
+        CU::Vec3f points[4] = { a,b,c, tris[i].Center() };
+        CU::Vec3f closePoint;
+
+        int v1vv2 = ((aPos - a).Length() < (aPos - b).Length()) ? 0 : 1;
+        int v3vv4 = ((aPos - c).Length() < (aPos - points[3]).Length()) ? 2 : 3;
+        int r = ((aPos - points[v1vv2]).Length() < (aPos - points[v3vv4]).Length()) ? v1vv2 : v3vv4;
+        //int r = (c.Length() < points[v1vv2].Length()) ? 2 : v1vv2;
+
+        closePoint = points[r];
+
+        //float v2_ls = v2.len_squared();
+        //return v2 * (dot(v2, v1) / v2_ls);
+
+        currDistance = (aPos - closePoint).LengthSqr();
         if (currDistance < closestDistance)
         {
             closestDistance = currDistance;
             closestIndex = i;
         }
     }
+
     return closestIndex;
 }
 
