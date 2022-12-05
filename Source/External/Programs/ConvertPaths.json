@@ -1,0 +1,35 @@
+{
+  "Import": [
+    "../../../Assets/Models/",
+    "../../../Assets/Animations/",
+    "../../../Assets/Textures/",
+    "../../../Assets/Sprites/",
+    "../../../Assets/VFX/"
+  ],
+  "Export": [
+    "../../../../Im_So_Tired_Unity/Assets/Models/",
+    "../../../../Im_So_Tired_Unity/Assets/Animations/",
+    "../../../../Im_So_Tired_Unity/Assets/Textures/",
+    "../../../../Im_So_Tired_Unity/Assets/Sprites/",
+    "../../../../Im_So_Tired_Unity/Assets/VFX/"
+  ],
+  "TestImport": [
+    "../../../Assets/Models/Placeholder Models/"
+  ],
+  "TestExport": [
+    "../../../../Im_So_Tired_Unity/Assets/Models/Placeholder Models/"
+  ],
+  "BuildExport": [
+    "../../../../Build_Dump/LatestBuild/Assets/Models/",
+    "../../../../Build_Dump/LatestBuild/Assets/Animations/",
+    "../../../../Build_Dump/LatestBuild/Assets/Textures/",
+    "../../../../Build_Dump/LatestBuild/Assets/Sprites/",
+    "../../../../Build_Dump/LatestBuild/Assets/VFX/"
+  ],
+  "TestBuildExport": [
+    "../../../../Build_Dump/LatestBuild/Assets/Models/Placeholder Models/"
+  ],
+  "IgnoreExtension": [
+
+  ]
+}
