@@ -10,6 +10,7 @@ namespace ISTE
 		virtual void Init(BaseEditor*) { return; }
 		void CheckActive();
 		virtual void Draw() { return; }
+		virtual void Settings();
 	protected:
 		bool myActive = false;
 		std::string myToolName = "NULL";

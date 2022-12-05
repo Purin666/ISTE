@@ -4,3 +4,6 @@ void ISTE::AbstractTool::CheckActive()
 {
 	ImGui::MenuItem(myToolName.c_str(), nullptr, &myActive);
 }
+void ISTE::AbstractTool::Settings()
+{
+}

@@ -120,6 +120,8 @@ ClientBin/
 *.jfm
 *.pfx
 *.publishsettings
-orleans.codegen.cs
-
-*.sln
+orleans.codegen.cs 
+*.sln  
+Bin/*.dll 
+Bin/*.dll 
+Bin/*.lib
