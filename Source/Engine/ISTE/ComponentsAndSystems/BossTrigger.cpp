@@ -37,7 +37,7 @@ void ISTE::BossTrigger::Update(float aDeltaTime)
 
 	if (myUnderTransition)
 	{
-		myPostRoarWaitTimer += aDeltaTime;
+		myPostRoarWaitTimer += aDeltaTime; 
 		
 		if (myPostRoarWaitTimer <= ((myPanTimer) + myWaitTimer) - 0.22)
 		{
@@ -55,7 +55,7 @@ void ISTE::BossTrigger::Update(float aDeltaTime)
 			if (myPostRoarWaitTimer >= (myPanTimer + myWaitTimer)  )
 			{
 				Context::Get()->myGraphicsEngine->GetAberrationEffect().GetBufferData().myRadialStrength.b = -t * 4.5;
-			}
+			} 
 		}
 		else
 		{
@@ -161,7 +161,7 @@ void ISTE::BossTrigger::Update(float aDeltaTime)
 					float t = 0; 
 					t = myShakeLerpTimer - (myShakeLerpTimer * myShakeLerpTimer * myShakeLerpTimer);
 					CU::Clamp(0.f, 1.f, t);
-					t *= 2.6;
+					t *= 2.6; 
 
 					float randomY = CU::GetRandomFloat(-0.5f, 0.5f);
 					float randomX = CU::GetRandomFloat(-0.5f, 0.5f);

@@ -113,8 +113,6 @@ namespace ISTE
 		void AoEDoT();
 		void Ultimate();
 
-		void InitMoveDistanceTimer();
-
 		std::mt19937 myRandomEngine;
 
 		std::uniform_real_distribution<float> myRandomYText;
@@ -250,7 +248,5 @@ namespace ISTE
 
 		AudioSource* mySource = nullptr;
 		LocalStepTimer* myBuildPathTimer = nullptr;
-		LocalStepTimer* myMoveDistanceTimer = nullptr;
-		CU::Vec3f myLastMovePosition;
 	};
 }

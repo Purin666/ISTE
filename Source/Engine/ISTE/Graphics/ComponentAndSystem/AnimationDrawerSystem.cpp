@@ -49,7 +49,7 @@ ISTE::AnimationDrawerSystem::~AnimationDrawerSystem()
 }
 
 
-void ISTE::AnimationDrawerSystem::FetchAnimation(const AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
+void ISTE::AnimationDrawerSystem::FetchAnimation(AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
 {
 	float delta;
 	Animation::KeyFrame curr, next;
@@ -58,15 +58,23 @@ void ISTE::AnimationDrawerSystem::FetchAnimation(const AnimatorComponent* anAnim
 	Animation*			anim		= myCtx->myAnimationManager->GetAnimation(fetchData.myAnimation);
 	ModelID				modelID		= myCtx->myAnimationManager->GetAnimation(fetchData.myAnimation)->myModel;
 
-	fetchData.myTimer += myCtx->myTimeHandler->GetDeltaTime() * anAnimator->mySpeedModifier * myPlayFactor;
-	if (fetchData.myTimer > anim->myLengthInSeconds) 
-		fetchData.myTimer = 0;
+	fetchData.myTimer += myCtx->myTimeHandler->GetDeltaTime() * fetchData.mySpeed * myPlayFactor;
+	if (fetchData.myTimer >= anim->myLengthInSeconds)
+	{
+		if (anAnimator->myLoopingFlag)
+			fetchData.myTimer = 0;
+		else
+		{
+			fetchData.myTimer = anim->myLengthInSeconds;
+			anAnimator->myAnimationState = AnimationState::eEnded;		//this shouldnt be like this but eh.
+		}
+	}
 
 	CalcCurrentKeyFrameAndDelta(fetchData.myAnimation, fetchData.myTimer, curr, next, delta);
 	UpdateLocaltransforms(modelID, outPose, curr, next, delta);
 }
 
-void ISTE::AnimationDrawerSystem::InterpolateAnimation(const AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
+void ISTE::AnimationDrawerSystem::InterpolateAnimation(AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
 {
 	Pose			animA; 
 	CU::Vec3f		scaleA;
@@ -116,7 +124,7 @@ void ISTE::AnimationDrawerSystem::InterpolateAnimation(const AnimatorComponent* 
 }
 
 
-void ISTE::AnimationDrawerSystem::PartialAnimation(const AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
+void ISTE::AnimationDrawerSystem::PartialAnimation(AnimatorComponent* anAnimator, AnimationBlendComponent* aCompData, const AnimationBlendNode aNode, Pose& outPose)
 {
 	Pose			animA;
 	ModelID			modelID		= myCtx->myAnimationManager->GetAnimation(anAnimator->myCurrentAnimation)->myModel;
@@ -739,14 +747,12 @@ float ISTE::AnimationDrawerSystem::PerformeInterpolationUGLY(AnimationBlendData&
 	{
 	case InterpolationType::eConstant:
 	{
-		data.myInterpConstant[id.myDataIndex].myTimer += Context::Get()->myTimeHandler->GetDeltaTime();
-
 		return data.myInterpConstant[id.myDataIndex].myTValue;
 	}
 
 	case InterpolationType::eLinear:
 	{
-		data.myInterpLinear[id.myDataIndex].myTimer += Context::Get()->myTimeHandler->GetDeltaTime() * data.myInterpLinear[id.myDataIndex].mySpeed;
+		data.myInterpLinear[id.myDataIndex].myTimer += Context::Get()->myTimeHandler->GetDeltaTime() * data.myInterpLinear[id.myDataIndex].mySpeed * myPlayFactor;
 
 		if (data.myInterpLinear[id.myDataIndex].myTimer >= 1)
 			data.myInterpLinear[id.myDataIndex].myTimer = 0;
@@ -756,7 +762,7 @@ float ISTE::AnimationDrawerSystem::PerformeInterpolationUGLY(AnimationBlendData&
 
 	case InterpolationType::eSin:
 	{
-		data.myInterpSin[id.myDataIndex].myTimer += Context::Get()->myTimeHandler->GetDeltaTime() * data.myInterpSin[id.myDataIndex].mySpeed;  
+		data.myInterpSin[id.myDataIndex].myTimer += Context::Get()->myTimeHandler->GetDeltaTime() * data.myInterpSin[id.myDataIndex].mySpeed * myPlayFactor;
 		return ((sin(data.myInterpSin[id.myDataIndex].myTimer) * 0.5) + 0.5) * data.myInterpSin[id.myDataIndex].myModifier;
 	}
 

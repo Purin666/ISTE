@@ -34,7 +34,6 @@ namespace ISTE {
 		//f(x) = x * mySpeed
 		struct LinearData {
 			float mySpeed = 1;		//X ( R 
-			
 			float myTimer = 0;
 		};
 
@@ -87,6 +86,7 @@ namespace ISTE {
 	
 	struct FetchAnimationData {
 		float		myTimer = 0;
+		float		mySpeed = 1;
 		AnimationID myAnimation = AnimationID(-1);
 	};
 

@@ -122,3 +122,4 @@ ClientBin/
 *.publishsettings
 orleans.codegen.cs
 
+*.sln

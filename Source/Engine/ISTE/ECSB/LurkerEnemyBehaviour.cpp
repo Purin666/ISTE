@@ -11,6 +11,7 @@
 #include "ISTE/Time/TimerDefines.h"
 #include "ISTE/Graphics/ComponentAndSystem/AnimatorComponent.h"
 #include "ISTE/Events/EventHandler.h"
+#include "ISTE/Graphics/ComponentAndSystem/ModelComponent.h"
 
 #include "ISTE/Graphics/Resources/ModelManager.h"
 
@@ -152,59 +153,50 @@ void ISTE::LurkerEnemyBehaviour::Init()
 	stepTimer.name = "LurkerTimer" + std::to_string(myHostId);
 	Context::Get()->myTimeHandler->AddTimer(stepTimer);
 
-
+	Context::Get()->mySceneHandler->GetActiveScene().AssignComponent<AnimationBlendComponent>(myHostId);
+	
 	myAnimationHelper.SetEntityID(myHostId);
+	myAnimationHelper.MapAnimation(LurkerAnimations::eDead, myDeadAnim, 0, 3, 3);
+	myAnimationHelper.MapAnimation(LurkerAnimations::eAttack, myAttackAnim, 0, 2, 2);
+	myAnimationHelper.MapAnimation(LurkerAnimations::eMovement, myMovmentAnim, AH_LOOPING, 0, 0); 
 	myAnimationHelper.MapAnimation(LurkerAnimations::eIdle, myIdleAnim, AH_LOOPING, 0, 0);
-	myAnimationHelper.MapAnimation(LurkerAnimations::eDead, myDeadAnim, 0, 0, 0);
-	myAnimationHelper.MapAnimation(LurkerAnimations::eAttack, myAttackAnim, 0, 0, 0);
-	myAnimationHelper.MapAnimation(LurkerAnimations::eMovement, myMovmentAnim, AH_LOOPING, 0, 0);
-	myAnimationHelper.ForcePlay(LurkerAnimations::eIdle);
+	myAnimationHelper.BlendSetFetchOp(LurkerAnimations::eIdle);
 	myAudioSource = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AudioSource>(myHostId);
 }
 
 void ISTE::LurkerEnemyBehaviour::Update(float aDeltaTime)
 {
-
-	if (myWaitForAnim && !myStats->myIsDead)
-	{
-		//if (myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState == AnimationState::eEnded)
-		//{
-		//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
-		//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
-		//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-		//	myWaitForAnim = false;
-		//}
-
-		if (!myAnimationHelper.IsPlaying())
-		{
-			myAnimationHelper.Play(LurkerAnimations::eIdle);
-			myWaitForAnim = false;
-		}
-	}
-
+	//'++???????????
+	//if (myWaitForAnim && !myStats->myIsDead)
+	//{
+	//	//if (myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState == AnimationState::eEnded)
+	//	//{
+	//	//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
+	//	//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
+	//	//	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
+	//	//	myWaitForAnim = false;
+	//	//}
+	//	 
+	//	//myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eIdle, 10); 
+	//}
 	if (myStats->myIsDead)
 	{
 
 		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myDeadAnim;
 		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = false;
 
-		myAnimationHelper.Play(LurkerAnimations::eDead);
+		myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eDead, 10);
 		myAudioSource->Play((int)LurkerSounds::eDeath, ASP_IGNOREIFACTIVE | ASP_EXLUSIVE);
 		//if(myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState == AnimationState::eEnded)
 		//	Context::Get()->mySceneHandler->GetActiveScene().DestroyEntity(myHostId);
-		
-		if (!myHaveGivenExperience)
-		{
-			Context::Get()->myEventHandler->InvokeEvent(EventType::TimDied, 0);
-			if (myStats->myIsElite) Context::Get()->myEventHandler->InvokeEvent(EventType::TimEliteDied, 0);
-			Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::MinionTookDamage, myStats->myMaxHealth);
-			Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerGainExperience, myExperience);
-			myHaveGivenExperience = true;
-		}
+
 		if (!myAnimationHelper.IsPlaying())
 		{
+			Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerGainExperience, myExperience);
 			Context::Get()->mySceneHandler->GetActiveScene().DestroyEntity(myHostId);
 		}
+
+		myAnimationHelper.Update();
 		return;
 	}
 
@@ -217,12 +209,14 @@ void ISTE::LurkerEnemyBehaviour::Update(float aDeltaTime)
 		{
 			if (!myActiveScene->GetComponent<ISTE::IdleEnemyBehaviour>(myHostId)->Reseting())
 			{
-				myAnimationHelper.Play(LurkerAnimations::eMovement);
+				myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eMovement, 4);
 			}
 			else
 			{
-				myAnimationHelper.Play(LurkerAnimations::eIdle);
+				myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eIdle, 4);
 			}
+
+			myAnimationHelper.Update();
 			return;
 		}
 		else
@@ -233,6 +227,8 @@ void ISTE::LurkerEnemyBehaviour::Update(float aDeltaTime)
 				myActiveScene->GetComponent<ISTE::IdleEnemyBehaviour>(myHostId)->SetIsActive(false);
 				myIsActive = true;
 			}
+
+			myAnimationHelper.Update();
 			return;
 		}
 		
@@ -268,9 +264,11 @@ void ISTE::LurkerEnemyBehaviour::Update(float aDeltaTime)
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-			myAnimationHelper.Play(LurkerAnimations::eIdle);
+			myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eIdle, 5);
 		}
-	}
+	} 
+
+	myAnimationHelper.Update();
 }
 
 void ISTE::LurkerEnemyBehaviour::OnTrigger(EntityID aId)
@@ -367,23 +365,21 @@ void ISTE::LurkerEnemyBehaviour::LurkMode(float aDeltaTime)
 	{
 		if (CanSeePlayer() && (myTransform->myPosition - playersTransform->myPosition).Length() <= (myKeepDistance + 0.5f) && abs(myTransform->myPosition.y - playersTransform->myPosition.y) <= 1)
 			Attack();
-
-		if (!myWaitForAnim)
-		{
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-			myAnimationHelper.Play(LurkerAnimations::eIdle);
-		}
+		
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
+		myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eIdle, 6);
+		
 		return;
 	}
 
-	if (!myWaitForAnim && !myTimerRunning)
+	if (!myTimerRunning)
 	{
 		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myMovmentAnim;
 		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
 		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-		myAnimationHelper.Play(LurkerAnimations::eMovement);
+		myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eMovement, 6);
 	}
 
 	float length;
@@ -497,14 +493,12 @@ void ISTE::LurkerEnemyBehaviour::Attack()
 	LurkerLookAt(*myTransform, playersTransform->myPosition, 1);
 
 	if (!myCanAttack)
-	{
-		if (!myWaitForAnim)
-		{
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
-			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-			myAnimationHelper.Play(LurkerAnimations::eIdle);
-		}
+	{ 
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
+		//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
+		myAnimationHelper.BlendSetInterpOp(LurkerAnimations::eIdle, 5);
+		
 		return;
 	}
 
@@ -525,9 +519,9 @@ void ISTE::LurkerEnemyBehaviour::Attack()
 		return;
 	}
 
-
-
-	myAnimationHelper.Play(LurkerAnimations::eAttack);
+	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+	myAnimationHelper.BlendSetPartialOp(LurkerAnimations::eAttack, partialJoint,0.9);
 	myWaitForAnim = true;
 
 	//myAudioSource->Play((int)LurkerSounds::eAttack);
@@ -561,7 +555,7 @@ void ISTE::LurkerEnemyBehaviour::Attack()
 	// Stay Trigger Timer
 	CountDown attackStayTimer;
 	attackSpeedTimer.name = "LurkerAttackStayTimer" + std::to_string(myHostId);
-	attackSpeedTimer.duration = 0.f; // myStats->myStayRate;
+	attackSpeedTimer.duration = myStats->myStayRate;
 	attackSpeedTimer.callback = [this]() { Context::Get()->mySceneHandler->GetActiveScene().DestroyEntity(myAttackId); };
 	Context::Get()->myTimeHandler->AddTimer(attackSpeedTimer);
 }

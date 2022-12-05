@@ -87,10 +87,10 @@ namespace ISTE {
 
 		std::vector<AnimationCommand> myRenderCommands; 
 
-		void (AnimationDrawerSystem::*BlendOperation[(int)AnimBlendOperationType::eCount])(const AnimatorComponent* anAnimator, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
-		void InterpolateAnimation	(const AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
-		void PartialAnimation		(const AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
-		void FetchAnimation			(const AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
+		void (AnimationDrawerSystem::*BlendOperation[(int)AnimBlendOperationType::eCount])(AnimatorComponent* anAnimator, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
+		void InterpolateAnimation	(AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
+		void PartialAnimation		(AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
+		void FetchAnimation			(AnimatorComponent*, AnimationBlendComponent*, const AnimationBlendNode, Pose&);
 
 	private: //shader stuff
 		bool InitBuffers();

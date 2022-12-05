@@ -63,7 +63,6 @@ namespace ISTE
 		bool myWaitForAnim = false;
 		bool myWaitForReAllignment = false;
 		bool myIsElite = false;
-		bool myHaveGivenExperience = false;
 
 		bool myFirstAttackDelay = true;
 		bool myTimerRunning = false;

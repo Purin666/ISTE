@@ -23,7 +23,6 @@
 #include "ISTE/StateStack/StateType.h"
 
 #include "ISTE/ComponentsAndSystems/EnemyBehaviourSystem.h"
-#include "ISTE/ECSB/ProjectileBlockBehaviour.h"
 
 #include "ISTE/Time/LocalStepTimer.h"
 
@@ -259,8 +258,6 @@ ISTE::PlayerBehaviour::~PlayerBehaviour()
 
 	if (myBuildPathTimer)
 		delete myBuildPathTimer;
-	if (myMoveDistanceTimer)
-		delete myMoveDistanceTimer;
 }
 
 void ISTE::PlayerBehaviour::Init()
@@ -300,8 +297,8 @@ void ISTE::PlayerBehaviour::Init()
 	//	myCamera.GetTransformNonConst()(4, 3) = myCameraPositioning.myPosition.z;
 	//}
 
-	Context::Get()->myGraphicsEngine->SetCamera(myCamera);
-
+	Context::Get()->myGraphicsEngine->SetCamera(myCamera); 
+	myAnimationHelper.SetBlendComp(Context::Get()->mySceneHandler->GetActiveScene().AssignComponent<AnimationBlendComponent>(myHostId));
 	myBuildPathTimer = new LocalStepTimer();
 	myBuildPathTimer->SetCallback([this]() { BuildPath(); });
 	myBuildPathTimer->SetDelay(20);
@@ -314,20 +311,20 @@ void ISTE::PlayerBehaviour::Init()
 	assert(mySource != nullptr && "AudioSource could not be found on player");
 
 	UpdateWeapon();
-	InitMoveDistanceTimer();
+	myAnimationHelper.ForceBlendSetFetchOp(PlayerAnimations::eIdle); 
 }
 
 void ISTE::PlayerBehaviour::Update(float aDeltaTime)
 {
-	if (!myIsActive)
-	{
-		if (!myAnimationHelper.IsPlaying())
-		{
-			myAnimationHelper.PlayInterpelated(PlayerAnimations::eIdle, myAnimationLerpData.myAnyToIdleSpeed);
-			mySource->Stop((int)PlayerSounds::eWalking);
-		}
-		return;
-	}
+	//if (!myIsActive)
+	//{
+	//	if (!myAnimationHelper.IsPlaying())
+	//	{
+	//		myAnimationHelper.PlayInterpelated(PlayerAnimations::eIdle, myAnimationLerpData.myAnyToIdleSpeed);
+	//		mySource->Stop((int)PlayerSounds::eWalking);
+	//	}
+	//	return;
+	//}
 	ISTE::Scene* scene = &myCtx->mySceneHandler->GetActiveScene();
 	auto& transformPool = scene->GetComponentPool<TransformComponent>();
 	TransformComponent* playerTransform = (TransformComponent*)transformPool.Get(GetEntityIndex(myHostId));
@@ -365,16 +362,16 @@ void ISTE::PlayerBehaviour::Update(float aDeltaTime)
 
 	if (myIsDead)
 	{
-		myAnimationHelper.PlayInterpelated(PlayerAnimations::eDead, myAnimationLerpData.myAnyToDeadSpeed);
-		
-		
-
-		if (!myAnimationHelper.IsPlaying())
-		{
-			//Context::Get()->myAudioHandler->PlayPreLoadedSound(ISTE::PreLoadedSounds::eWTTBP);
-			//Context::Get()->mySceneHandler->LoadScene(0);
-
-		}
+		myAnimationHelper.BlendSetInterpOp(PlayerAnimations::eDead, myAnimationLerpData.myAnyToDeadSpeed);
+		//
+		//
+		//
+		//if (!myAnimationHelper.IsPlaying())
+		//{
+		//	//Context::Get()->myAudioHandler->PlayPreLoadedSound(ISTE::PreLoadedSounds::eWTTBP);
+		//	//Context::Get()->mySceneHandler->LoadScene(0);
+		//
+		//}
 		// Add timer to fadeout, things that happens once when player dies
 		static bool deathTimerAdded;
 
@@ -383,13 +380,12 @@ void ISTE::PlayerBehaviour::Update(float aDeltaTime)
 
 		myAnimationHelper.Update();
 		UpdateWeapon();
-
+		
 
 		myDeathTimer += aDeltaTime; 
 		float t = 1 - myDeathTimer/3.f;
 		Context::Get()->myGraphicsEngine->GetAberrationEffect().GetBufferData().myRadialStrength = { t,0,0 };
 		if (deathTimerAdded) return;
-		myCtx->myEventHandler->InvokeEvent(EventType::PlayerDied, 0);
 		CountDown timer;
 		timer.name = "Lose Timer";
 		timer.duration = 2.f; // should be time it takes for player to fall to ground
@@ -474,7 +470,6 @@ void ISTE::PlayerBehaviour::Update(float aDeltaTime)
 	if (input->IsKeyDown(MK_LBUTTON))
 		BuildPath();
 	myBuildPathTimer->Update(aDeltaTime);
-	myMoveDistanceTimer->Update(aDeltaTime);
 
 	bool shiftFlag = myCtx->myInputHandler->IsKeyHeldDown(VK_SHIFT);
 	if (shiftFlag)
@@ -578,7 +573,7 @@ void ISTE::PlayerBehaviour::Update(float aDeltaTime)
 void ISTE::PlayerBehaviour::OnTrigger(EntityID aId)
 {
 	AttackValueComponent* attacked = myCtx->mySceneHandler->GetActiveScene().GetComponent<AttackValueComponent>(aId);
-	if (attacked == nullptr || attacked->myTag != "EnemyAttack" || myOnIFrameMode) // Haha, not attacked this time.
+	if (attacked == nullptr || attacked->myTag != "EnemyAttack" || myOnIFrameMode || myArmored) // Haha, not attacked this time.
 		return;
 
 	if (attacked->myExtraInfo == "Projectile")
@@ -587,9 +582,6 @@ void ISTE::PlayerBehaviour::OnTrigger(EntityID aId)
 		Context::Get()->myTimeHandler->RemoveTimer("HunterAttack_" + attacked->myIdentifier);
 		Context::Get()->myTimeHandler->RemoveTimer("HunterProjectileTimer_" + attacked->myIdentifier);
 	}
-
-	if (myArmored)
-		return;
 
 	Scene& scene = myCtx->mySceneHandler->GetActiveScene();
 	ModelComponent* model = scene.GetComponent<ModelComponent>(myHostId);
@@ -621,7 +613,6 @@ void ISTE::PlayerBehaviour::OnTrigger(EntityID aId)
 	if (myHealth <= 0.f) {
 		 
 		myIsDead = true;
-
 	}
 }
 
@@ -664,47 +655,48 @@ void ISTE::PlayerBehaviour::Move(float aDeltaTime)
 	if (myOrders.empty() || !myHasAnOrder)
 	{
 		/*Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleId;*/
-		if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
-		{
-			myAnimationHelper.PlayInterpelated(PlayerAnimations::eIdle, myAnimationLerpData.myMoveToIdleSpeed, PlayerAnimations::eMovement);
-		}
-		else if (myAnimationHelper.GetCurrentMap() != PlayerAnimations::eThrowAbility && myAnimationHelper.GetLastMap() == PlayerAnimations::eMovement && myAnimationHelper.GetCurrentMap() != PlayerAnimations::eIdle)
-		{
-			ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
-			int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
-			myAnimationHelper.PlayPartially(PlayerAnimations::eIdle, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
-		}
-		else
-			myAnimationHelper.Play(PlayerAnimations::eIdle);
+		//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
+		//{
+		//	myAnimationHelper.PlayInterpelated(PlayerAnimations::eIdle, myAnimationLerpData.myMoveToIdleSpeed, PlayerAnimations::eMovement);
+		//}
+		//else if (myAnimationHelper.GetCurrentMap() != PlayerAnimations::eThrowAbility && myAnimationHelper.GetLastMap() == PlayerAnimations::eMovement && myAnimationHelper.GetCurrentMap() != PlayerAnimations::eIdle)
+		//{
+		//	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+		//	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+		//	myAnimationHelper.PlayPartially(PlayerAnimations::eIdle, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
+		//}
+		//else
+		//	myAnimationHelper.Play(PlayerAnimations::eIdle);
+		myAnimationHelper.BlendSetInterpOp(PlayerAnimations::eIdle,10);
 
 		mySource->Stop((int)PlayerSounds::eWalking);
 
 		return;
 	}
-
+	myAnimationHelper.BlendSetInterpOp(PlayerAnimations::eMovement, 5); 
 	/*Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myWalkId;*/ 
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
-	{
-		myAnimationHelper.PlayInterpelated(PlayerAnimations::eMovement, myAnimationLerpData.myIdleToMoveSpeed);
-	}
-	else if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::ePlayerBag)
-	{
-		myAnimationHelper.PlayInterpelated(PlayerAnimations::ePlayerBag, 0.25);
-	}
-	else if (myAnimationHelper.GetLastMap() == PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() != PlayerAnimations::eMovement)
-	{
-		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
-		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
-		myAnimationHelper.PlayPartially(PlayerAnimations::eMovement, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
-	}
-	else if (myAnimationHelper.IsPlaying() && myAnimationHelper.GetLastMap() == PlayerAnimations::eMovement && myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle)
-	{
-		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
-		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
-		myAnimationHelper.PlayPartially(PlayerAnimations::eMovement, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
-	}
-	else
-		myAnimationHelper.Play(PlayerAnimations::eMovement);
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//{
+	//	myAnimationHelper.PlayInterpelated(PlayerAnimations::eMovement, myAnimationLerpData.myIdleToMoveSpeed);
+	//}
+	//else if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::ePlayerBag)
+	//{
+	//	myAnimationHelper.PlayInterpelated(PlayerAnimations::ePlayerBag, 0.25);
+	//}
+	//else if (myAnimationHelper.GetLastMap() == PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() != PlayerAnimations::eMovement)
+	//{
+	//	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+	//	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+	//	myAnimationHelper.PlayPartially(PlayerAnimations::eMovement, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
+	//}
+	//else if (myAnimationHelper.IsPlaying() && myAnimationHelper.GetLastMap() == PlayerAnimations::eMovement && myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle)
+	//{
+	//	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+	//	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+	//	myAnimationHelper.PlayPartially(PlayerAnimations::eMovement, myAnimationHelper.GetCurrentMap(), partialJoint, 0.95, true);
+	//}
+	//else
+	//	myAnimationHelper.Play(PlayerAnimations::eMovement);
 
 	//if (mySource->GetActiveClip() != (int)PlayerSounds::eWalking || !mySource->IsPlaying())
 	//{
@@ -1072,7 +1064,7 @@ void ISTE::PlayerBehaviour::InitAnimations()
 	myAnimationHelper.MapAnimation(PlayerAnimations::eIdle, myIdleId, AH_LOOPING, 0, 0);
 	myAnimationHelper.MapAnimation(PlayerAnimations::eMovement, myWalkId, AH_LOOPING, 0, 0);
 	myAnimationHelper.MapAnimation(PlayerAnimations::eDead, myDeadId, 0, 2, 2);
-	myAnimationHelper.MapAnimation(PlayerAnimations::eThrowAbility, myThrowAbilityId, 0, 1, 1);
+	myAnimationHelper.MapAnimation(PlayerAnimations::eThrowAbility, myThrowAbilityId, 0, 1, 1, 2);
 	myAnimationHelper.MapAnimation(PlayerAnimations::eMeleeAttack, myMeleeAttackId, 0, 1, 1);
 	myAnimationHelper.MapAnimation(PlayerAnimations::eSpell, mySpellId, 0, 1, 1);
 	myAnimationHelper.MapAnimation(PlayerAnimations::ePlayerBag, Context::Get()->myAnimationManager->LoadAnimation(myHostId, "../Assets/Animations/CH_Player_crouch_ANIM.fbx").myValue, 0, 3, 0);
@@ -1248,17 +1240,17 @@ void ISTE::PlayerBehaviour::PrimaryAttack()
 	mySource->SetPitch((int)PlayerSounds::ePrimaryAttack, dist(rd));
 
 	
-
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
-	{ 
-		myAnimationHelper.Play(PlayerAnimations::eMeleeAttack);
-	}
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
+	//
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//{ 
+	//	myAnimationHelper.Play(PlayerAnimations::eMeleeAttack);
+	//}
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
 	{
 		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
 		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
 		float myInfluence = 0.75f;
-		myAnimationHelper.PlayPartially(myAnimationHelper.GetCurrentMap(), PlayerAnimations::eMeleeAttack, partialJoint, myInfluence);
+		myAnimationHelper.BlendSetPartialOp(PlayerAnimations::eMeleeAttack, partialJoint, myInfluence);
 	}
 
 	// Create a new entity
@@ -1318,18 +1310,12 @@ void ISTE::PlayerBehaviour::SecondaryAttack()
 	myIsStaled = true;
 	myStalTimer = 0;
 	Reset();
+	myAnimationHelper.ForceBlendSetInterpOp(PlayerAnimations::eIdle,10); //forces to idle when using secondary
 
-	if(myAnimationHelper.GetCurrentMap() != PlayerAnimations::eThrowAbility)
-	{
-		myAnimationHelper.ForcePlay(PlayerAnimations::eThrowAbility);
-	}
-	//else if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
-	//{
-	//	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
-	//	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
-	//	float myInfluence = 0.95;
-	//	myAnimationHelper.PlayPartially(myAnimationHelper.GetCurrentMap(), PlayerAnimations::eThrowAbility, partialJoint, myInfluence);
-	//}
+	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+	float myInfluence = 0.95; 
+	myAnimationHelper.BlendSetPartialOp(PlayerAnimations::eThrowAbility, partialJoint, myInfluence); 
 
 	//mySource->SetActiveClip((int)PlayerSounds::eSecondaryAttack);
 	//mySource->Play();
@@ -1450,22 +1436,22 @@ void ISTE::PlayerBehaviour::MagicArmor()
 	if (myMana - myArmorCost <= 0.f) // The cost is affordable
 		return;
 
-	Scene& scene = Context::Get()->mySceneHandler->GetActiveScene();
 	// send event
 	Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerUsedAbility, 2);
 
 	myMagicArmorVFX = myCtx->myVFXHandler->SpawnVFX("Player_Armor");
 	
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//{
+	//	myAnimationHelper.Play(PlayerAnimations::eSpell);
+	//}
+	//else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
 	{
-		myAnimationHelper.Play(PlayerAnimations::eSpell);
-	}
-	else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
-	{
-		ModelComponent* mC = scene.GetComponent<ModelComponent>(myHostId);
+		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
 		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
 		float myInfluence = 0.90;
-		myAnimationHelper.PlayPartially(myAnimationHelper.GetCurrentMap(), PlayerAnimations::eSpell, partialJoint, myInfluence);
+
+		myAnimationHelper.BlendSetPartialOp(PlayerAnimations::eSpell, partialJoint, myInfluence);
 	}
 	//mySource->SetActiveClip((int)PlayerSounds::eMagicArmor);
 	//mySource->Play();
@@ -1482,35 +1468,14 @@ void ISTE::PlayerBehaviour::MagicArmor()
 		armorCooldown.duration = myArmorCooldown;
 		armorCooldown.callback = [this]() { myCanUseArmor = true; };
 		myCtx->myTimeHandler->AddTimer(armorCooldown);
-
-		EntityID armorTriggerId = scene.NewEntity();
-		SphereTriggerComponent* armorTrigger = scene.AssignComponent<SphereTriggerComponent>(armorTriggerId);
-		TransformComponent* armorTransform = scene.AssignComponent<TransformComponent>(armorTriggerId);
-		ProjectileBlockBehaviour* pbb = scene.AssignBehaviour<ProjectileBlockBehaviour>(armorTriggerId);
-		ComponentID compId = myCtx->mySceneHandler->GetId<TransformComponent>();
-
-		UpdateTimer armorTriggerTimer;
-		armorTriggerTimer.duration = myArmorDuration;
-		armorTriggerTimer.callback = [compId, pIndex = GetEntityIndex(myHostId), aIndex = GetEntityIndex(armorTriggerId)]() {
-			Scene& scene = Context::Get()->mySceneHandler->GetActiveScene();
-			ComponentPool& tPool = scene.GetComponentPool(compId);
-			TransformComponent* playerTransform = (TransformComponent*)tPool.Get(pIndex);
-			TransformComponent* armorTransform = (TransformComponent*)tPool.Get(aIndex);
-			if (playerTransform != nullptr && armorTransform != nullptr)
-			{
-				armorTransform->myPosition = playerTransform->myPosition;
-				armorTransform->myPosition.y += 0.9f;
-			}
-		};
-		myCtx->myTimeHandler->AddTimer(armorTriggerTimer);
-	
+	}
+	{
 		CountDown armorDuration;
 		armorDuration.name = "armorCooldown";
 		armorDuration.duration = myArmorDuration;
-		armorDuration.callback = [this, armorTriggerId]() {
+		armorDuration.callback = [this]() { 
 			myArmored = false; 
 			Context::Get()->myVFXHandler->DeactivateVFX(myMagicArmorVFX);
-			Context::Get()->mySceneHandler->GetActiveScene().DestroyEntity(armorTriggerId);
 			myMagicArmorVFX = -1;
 		};
 		myCtx->myTimeHandler->AddTimer(armorDuration);
@@ -1695,7 +1660,6 @@ void ISTE::PlayerBehaviour::Teleportation(TransformComponent* aTransform, CU::Ve
 {
 	// send event
 	Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerUsedAbility, 4);
-	Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerTeleportedDistance, (aTransform->myPosition - aDestination).Length() * 100.f);
 
 	myMana -= myTeleportCost;
 	myCtx->myEventHandler->InvokeEvent(EventType::PlayerSpentMana, INVALID_ENTITY);
@@ -1743,16 +1707,16 @@ void ISTE::PlayerBehaviour::AoEDoT()
 	// send event
 	Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerUsedAbility, 3);
 	
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
-	{
-		myAnimationHelper.Play(PlayerAnimations::eSpell);
-	}
-	else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//{
+	//	myAnimationHelper.Play(PlayerAnimations::eSpell);
+	//}
+	//else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
 	{
 		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
 		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
 		float myInfluence = 0.95;
-		myAnimationHelper.PlayPartially(myAnimationHelper.GetCurrentMap(), PlayerAnimations::eSpell, partialJoint, myInfluence);
+		myAnimationHelper.BlendSetPartialOp(PlayerAnimations::eSpell, partialJoint, myInfluence); 
 	}
 	//mySource->SetActiveClip((int)PlayerSounds::eAOE);
 	//mySource->Play();
@@ -1833,16 +1797,16 @@ void ISTE::PlayerBehaviour::Ultimate()
 	Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerUsedAbility, 5);
 
 	
-	if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
-	{
-		myAnimationHelper.Play(PlayerAnimations::eSpell);
-	}
-	else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
+	//if (myAnimationHelper.GetCurrentMap() == PlayerAnimations::eIdle)
+	//{
+	//	myAnimationHelper.Play(PlayerAnimations::eSpell);
+	//}
+	//else if (myAnimationHelper.GetLastMap() != PlayerAnimations::eIdle && myAnimationHelper.GetCurrentMap() == PlayerAnimations::eMovement)
 	{
 		ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
 		int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
 		float myInfluence = 1.f;
-		myAnimationHelper.PlayPartially(myAnimationHelper.GetCurrentMap(), PlayerAnimations::eSpell, partialJoint, myInfluence);
+		myAnimationHelper.BlendSetPartialOp(PlayerAnimations::eSpell, partialJoint, myInfluence); 
 	}
 
 	mySource->Play((int)PlayerSounds::eAOESIMExplode);
@@ -1908,23 +1872,6 @@ void ISTE::PlayerBehaviour::Ultimate()
 	}
 
 	//myCtx->myVFXHandler->Play(myBeamVFX);
-}
-
-void ISTE::PlayerBehaviour::InitMoveDistanceTimer()
-{
-	Scene& scene = myCtx->mySceneHandler->GetActiveScene();
-	TransformComponent* t = scene.GetComponent<TransformComponent>(myHostId);
-	ComponentID compId = myCtx->mySceneHandler->GetId<TransformComponent>();
-	myLastMovePosition = t->myPosition;
-
-	myMoveDistanceTimer = new LocalStepTimer();
-	myMoveDistanceTimer->SetDelay(0.5f);
-	myMoveDistanceTimer->SetCallback([this, compId, index = GetEntityIndex(myHostId)]() {
-		ComponentPool& compPool = myCtx->mySceneHandler->GetActiveScene().GetComponentPool<TransformComponent>();
-		TransformComponent* t = (TransformComponent*)compPool.Get(index);
-		Context::Get()->myEventHandler->InvokeEvent(EventType::PlayerMoveDistance, (t->myPosition - myLastMovePosition).Length() * 100.f);
-		myLastMovePosition = t->myPosition;
-	});
 }
 
 void ISTE::PlayerBehaviour::UpdateWithDatabase(CU::Database<true>& aBehaviourDatabase)
