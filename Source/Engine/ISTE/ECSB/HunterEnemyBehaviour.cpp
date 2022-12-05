@@ -195,14 +195,15 @@ void ISTE::HunterEnemyBehaviour::Init()
 	stepTimer.name = "HunterTimer_" + std::to_string(myHostId);
 	Context::Get()->myTimeHandler->AddTimer(stepTimer);
 
+	Context::Get()->mySceneHandler->GetActiveScene().AssignComponent<AnimationBlendComponent>(myHostId);
 	myAnimationHelper.SetEntityID(myHostId);
 	myAnimationHelper.MapAnimation(HunterAnimations::eIdle, myIdleAnim, AH_LOOPING, 0, 0);
-	myAnimationHelper.MapAnimation(HunterAnimations::eDead, myDeadAnim, 0, 0, 0);
-	myAnimationHelper.MapAnimation(HunterAnimations::eAttack, myAttackAnim, 0, 0, 0);
 	myAnimationHelper.MapAnimation(HunterAnimations::eMovement, myMovmentAnim, AH_LOOPING, 0, 0);
-	myAnimationHelper.MapAnimation(HunterAnimations::ePreExplosion, myPreExplodeAnim, AH_LOOPING, 0, 0);
-	myAnimationHelper.MapAnimation(HunterAnimations::eExplode, myExplodeAnim, 0, 0, 0, 15.f);
-	myAnimationHelper.ForcePlay(HunterAnimations::eIdle);
+	myAnimationHelper.MapAnimation(HunterAnimations::eAttack, myAttackAnim, 0, 2, 2);
+	myAnimationHelper.MapAnimation(HunterAnimations::eDead, myDeadAnim, 0, 3, 3);
+	myAnimationHelper.MapAnimation(HunterAnimations::ePreExplosion, myPreExplodeAnim, AH_LOOPING, 4, 4);
+	myAnimationHelper.MapAnimation(HunterAnimations::eExplode, myExplodeAnim, 0, 5, 5, 15.f);
+	myAnimationHelper.BlendSetFetchOp(HunterAnimations::eIdle);
 
 	myAudioSource = myActiveScene->GetComponent<AudioSource>(myHostId);
 
@@ -227,25 +228,13 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 		if(!myAnimationHelper.IsPlaying())
 			myActiveScene->DestroyEntity(myHostId);
 
+		myAnimationHelper.Update();
 		return;
 	}
-
-	if (myWaitForAnim && !myStats->myIsDead)
-	{
-		if (!myAnimationHelper.IsPlaying())
-		{
-			myAnimationHelper.Play(HunterAnimations::eIdle);
-			myWaitForAnim = false;
-		}
-	}
-
 
 	if (myStats->myIsDead)
 	{
 		Explosion();
-		Context::Get()->myEventHandler->InvokeEvent(EventType::BorisDied, 0);
-		if (myIsElite) Context::Get()->myEventHandler->InvokeEvent(EventType::BorisEliteDied, 0);
-		Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::MinionTookDamage, myStats->myMaxHealth);
 		Context::Get()->myEventHandler->InvokeEvent(ISTE::EventType::PlayerGainExperience, myExperience);
 		//myAnimationHelper.Play(HunterAnimations::eDead);
 		/*	myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myDeadAnim;
@@ -257,6 +246,7 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 		//	myActiveScene->DestroyEntity(myCircleVFX);
 		//	myActiveScene->DestroyEntity(myHostId);
 		//}
+		myAnimationHelper.Update();
 		return;
 	}
 
@@ -267,12 +257,13 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 		{
 			if (!myActiveScene->GetComponent<ISTE::IdleEnemyBehaviour>(myHostId)->Reseting())
 			{
-				myAnimationHelper.Play(HunterAnimations::eMovement);
+				myAnimationHelper.BlendSetInterpOp(HunterAnimations::eMovement,5);
 			}
 			else
 			{
-				myAnimationHelper.Play(HunterAnimations::eIdle);
+				myAnimationHelper.BlendSetInterpOp(HunterAnimations::eIdle, 5); 
 			}
+			myAnimationHelper.Update();
 			return;
 		}
 		else
@@ -283,6 +274,7 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 				myActiveScene->GetComponent<ISTE::IdleEnemyBehaviour>(myHostId)->SetIsActive(false);
 				myIsActive = true;
 			}
+			myAnimationHelper.Update();
 			return;
 		}
 	}
@@ -294,6 +286,7 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 		if (myWarningDelay <= 0)
 			Explosion();
 
+		myAnimationHelper.Update();
 		return;
 	}
 
@@ -321,8 +314,8 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 		myStalTimer += aDeltaTime;
 		if (myStalTimer >= myStalTime)
 			myIsStaled = false;
-
-		myAnimationHelper.Play(HunterAnimations::eIdle);
+		
+		//myAnimationHelper.BlendSetInterpOp(HunterAnimations::eIdle,5);
 	}
 
 	if (myHasIdleBehaviour && !myHasAnOrder && !myWarningPlayer)
@@ -337,9 +330,10 @@ void ISTE::HunterEnemyBehaviour::Update(float aDeltaTime)
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myCurrentAnimation = myIdleAnim;
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myAnimationState = AnimationState::ePlaying;
 			//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = true;
-			myAnimationHelper.Play(HunterAnimations::eIdle);
+			myAnimationHelper.BlendSetInterpOp(HunterAnimations::eIdle, 5);
 		}
 	}
+	myAnimationHelper.Update();
 }
 
 void ISTE::HunterEnemyBehaviour::OnTrigger(EntityID aId)
@@ -440,19 +434,10 @@ void ISTE::HunterEnemyBehaviour::HuntMode(float aDeltaTime)
 		return;
 	}
 
-	if (!myHasAnOrder)
-	{
-		if (!myWaitForAnim)
-		{
-			myAnimationHelper.Play(HunterAnimations::eIdle);
-		}
+	if (!myHasAnOrder) 
 		return;
-	}
-
-	if (!myWaitForAnim)
-	{
-		myAnimationHelper.Play(HunterAnimations::eMovement);
-	}
+	 
+	
 
 	//myAnimationHelper.Play(HunterAnimations::eMovement);
 
@@ -476,19 +461,16 @@ void ISTE::HunterEnemyBehaviour::HuntMode(float aDeltaTime)
 			myHasAnOrder = false;
 			if (CanSeePlayer() && length <= myStats->myMiniumDistance && abs(playersTransform->myPosition.y - myTransform->myPosition.y) <= 3.f)
 				Attack(aDeltaTime);
-
-			if (myAnimationHelper.GetCurrentMap() != HunterAnimations::eAttack)
-				myAnimationHelper.Play(HunterAnimations::eIdle);
+			 
+			myAnimationHelper.BlendSetInterpOp(HunterAnimations::eIdle, 5); 
 		}
 	}
 	else
 	{
 		myTransform->myPosition = myTransform->myPosition + unitVector * aDeltaTime * mySpeed;
 		if (CanSeePlayer() && length <= myStats->myMiniumDistance && abs(playersTransform->myPosition.y - myTransform->myPosition.y) <= 3.f)
-			Attack(aDeltaTime);
-
-		if (myAnimationHelper.GetCurrentMap() != HunterAnimations::eAttack)
-			myAnimationHelper.Play(HunterAnimations::eMovement);
+			Attack(aDeltaTime);  
+		myAnimationHelper.BlendSetInterpOp(HunterAnimations::eMovement, 5); 
 	}
 }
 
@@ -541,24 +523,22 @@ void ISTE::HunterEnemyBehaviour::Attack(float aDeltaTime)
 	HunterLookAt(*myTransform, playersTransform->myPosition, 1);
 
 	if (!myCanAttack)
-	{
-		if (!myWaitForAnim)
-		{
-			myAnimationHelper.Play(HunterAnimations::eIdle);
-		}
 		return;
-	}
+	
 
 
 
 	if (!CanShootPlayer(myTransform->myPosition + CU::Vec3f(0, 0.9f, 0), playersTransform->myPosition + CU::Vec3f(0, 0.9f, 0)))
-		return;
+		return; 
 
-	
 	myIsStaled = true;
 	myStalTimer = 0;
+
+	ModelComponent* mC = Context::Get()->mySceneHandler->GetActiveScene().GetComponent<ModelComponent>(myHostId);
+	int partialJoint = Context::Get()->myModelManager->GetBoneNameToIdMap(mC->myModelId)["Spine1_SK"];
+	myAnimationHelper.BlendSetPartialOp(HunterAnimations::eAttack, partialJoint, 0.98f);
+
 	TransformComponent* transform = myActiveScene->GetComponent<TransformComponent>(myHostId);
-	myAnimationHelper.Play(HunterAnimations::eAttack);
 	myWaitForAnim = true;
 	myAudioSource->Play((int)HunterSounds::eAttack);
 	myProjectileCount += 1;
@@ -639,7 +619,7 @@ void ISTE::HunterEnemyBehaviour::PreExplosion()
 	//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myLoopingFlag = false;
 	//myActiveScene->GetComponent<AnimatorComponent>(myHostId)->myTimer = 0;
 
-	myAnimationHelper.ForcePlay(HunterAnimations::ePreExplosion);
+	myAnimationHelper.BlendSetInterpOp(HunterAnimations::ePreExplosion, 7.5); 
 	myWaitForAnim = true;
 	myAudioSource->Play((int)HunterSounds::ePreExplosion, ASP_EXLUSIVE | ASP_IGNOREIFACTIVE);
 
@@ -677,7 +657,7 @@ void ISTE::HunterEnemyBehaviour::Explosion()
 
 	myActiveScene->GetComponent<ModelComponent>(myHostId)->myModelId = myExplodeModel;
 
-	myAnimationHelper.ForcePlay(HunterAnimations::eExplode);
+	myAnimationHelper.BlendSetInterpOp(HunterAnimations::eExplode, 10); 
 	myAudioSource->Play((int)HunterSounds::eExplosion, ASP_EXLUSIVE | ASP_IGNOREIFACTIVE);
 
 	EntityID decalId = myActiveScene->NewEntity();

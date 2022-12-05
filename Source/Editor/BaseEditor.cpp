@@ -31,6 +31,7 @@
 #include "Tools/StateTool.h"
 #include "Tools/BehaviourTool.h"
 #include "Tools/LightTool.h"
+#include "Tools/EditorSettingsTool.h"
 
 #include "imgui/imgui_internal.h"
 
@@ -79,6 +80,8 @@ void ISTE::BaseEditor::Init()
 	myTools.push_back(new ISTE::LightTool);
 	myTools.push_back(new ISTE::VFXTool);
 	myTools.push_back(new ISTE::AnimationBlendTool);
+	myTools.push_back(new ISTE::EditorSettingsTool); //This tool makes it recommended to add all tools before initializing.
+
 	for (AbstractTool* i : myTools)
 	{
 		i->Init(this);
@@ -633,12 +636,13 @@ void ISTE::BaseEditor::CheckChildren(const std::vector<EntityID>& anEntityListTo
 
 	std::string tempSearch;
 	std::transform(myObjectSearch.begin(), myObjectSearch.end(), std::back_inserter(tempSearch), ::tolower);
-
+	
 	for (const EntityID& i : anEntityListToCheck)
 	{
 		const ISTE::Entity& tempEntity = Context::Get()->mySceneHandler->GetActiveScene().GetEntity(i);
 
 		std::string tempName;
+		std::transform(myObjectSearch.begin(), myObjectSearch.end(), std::back_inserter(tempSearch), ::tolower);
 		std::transform(tempEntity.myName.begin(), tempEntity.myName.end(), std::back_inserter(tempName), ::tolower);
 
 		if (tempName.find(tempSearch) > tempName.length())

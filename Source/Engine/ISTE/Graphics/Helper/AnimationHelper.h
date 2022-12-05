@@ -21,7 +21,7 @@
 typedef unsigned char AnimationFlag;
 
 #define AH_LOOPING		0b00000001
-#define AH_ADDTOQUE		0b00000010
+#define AH_ADDTOQUE		0b00000010 
 
 
 
@@ -49,7 +49,7 @@ namespace ISTE
 			AnimationFlag		myAnimationFlag;
 			int					myOverrideValue		= 0;
 			int					myAnimationValue	= 0;
-			float				mySpeed				= 10.f;
+			float				mySpeed				= 1.f;
 			AnimationID			myAnimation; 
 		};
 		struct AnimationBlendBehaviour
@@ -68,7 +68,13 @@ namespace ISTE
 		inline void SetEntityID(EntityID anEntity) 
 		{ 
 			myEntity	= anEntity; 
-			myAnimator	= Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AnimatorComponent>(myEntity);
+			myAnimator	= Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AnimatorComponent>(myEntity); 
+			myAnimBlend	= Context::Get()->mySceneHandler->GetActiveScene().GetComponent<AnimationBlendComponent>(myEntity); 
+		}
+		//temp
+		inline void SetBlendComp(AnimationBlendComponent* anBlendComp)
+		{
+			myAnimBlend = anBlendComp;
 		}
 
 		inline void MapAnimation(MapType aMapValue, AnimationID aAnimationId, AnimationFlag aFlag, int aOverrideValue, int aAnimationValue, float aSpeed = 1.f)
@@ -83,13 +89,22 @@ namespace ISTE
 			myMappedAnimations[aMapValue] = ab;
 		}
 		
-		//void BlendSetFetchOp(MapType);
-		//void ForceBlendSetFetchOp(MapType);
-		//void RecalculateBlends();
+		void BlendSetFetchOp(MapType);
+		void ForceBlendSetFetchOp(MapType);
+
+		void BlendSetInterpOp(MapType aMapType, float aInterpSpeed);
+		void ForceBlendSetInterpOp(MapType aMapType, float aInterpSpeed);
+
+		void BlendSetPartialOp(MapType aMapType, size_t aBoneIndex, float aInfluence);
+		void ForceBlendSetPartialOp(MapType aMapType, size_t aBoneIndex, float aInfluence);
+
+		void RecalculateBlends();
 
 		//currently dosn't que stuff
 		void ForcePlay(MapType aMapValue);
 		void Play(MapType aMapValue);
+
+		//to be removed 
 		void ForcePlayInterpelated(MapType aFrom, MapType aToMapValue, float anInterpSpeed);
 		void PlayInterpelated(MapType aMapValue, float anInterpSpeed, MapType aFromMapValue = MapType(-1));
 		void ForcePlayPartially(MapType aMapValue, MapType aMapToBlendWith, int aBoneIndex, float aPartialStr, bool aFlipped = false, bool aShouldClear = false );
@@ -141,119 +156,230 @@ namespace ISTE
 
 
 		std::unordered_map<MapType, AnimationBehaviour> myMappedAnimations;
+		LocalCountDown myLocalLerpTimer;
+		LocalCountDown myLocalPartialTimer;
 		LocalCountDown myLocalCountDown;
 
 
 		AnimationFlag myCurrentFlag;
-		MapType myCurrentMapValue = MapType();
-		MapType myLastMapValue = MapType();
+		MapType myCurrentMapValue;
+		MapType myLastMapValue;
+
+		MapType myFetchMap	= MapType(-1);
+		MapType myLerpMap	= MapType(-1);
+		MapType myPartMap	= MapType(-1);
+
 
 		bool myAnimationQued;
 		MapType myQuedAnimation;
 	};
 
-	//template<typename MapType>
-	//inline void AnimationHelper<MapType>::BlendSetFetchOp(MapType aMapType)
-	//{
-	//	if (myAnimBlend == nullptr || myAnimator == nullptr] || aMapType == cMap)
-	//		return;
-	//
-	//	if (myBlends[(int)OperationType::eFetch].myEnabled)
-	//	{
-	//		AnimationBehaviour cB = myMappedAnimations[cMap];
-	//		AnimationBehaviour nB = myMappedAnimations[aMapType]; 
-	//
-	//		if (cB.myOverrideValue <= nB.myAnimationValue)
-	//			ForceBlendSetFetchOp(aMapType);
-	//		return;
-	//	}
-	//
-	//	ForceBlendSetFetchOp(aMapType);
-	//}
-
-	//template<typename MapType>
-	//inline void AnimationHelper<MapType>::ForceBlendSetFetchOp(MapType aMapType)
-	//{
-	//	myBlends[(int)OperationType::eFetch].myMappedAnimation = aMapType;
-	//	myBlends[(int)OperationType::eFetch].myEnabled = true; 
-	//
-	//	RecalculateBlends();
-	//}
-
-	//template<typename MapType>
-	//inline void AnimationHelper<MapType>::RecalculateBlends()
-	//{
-	//	AnimationBlendData& aBD = myAnimBlend->myAnimationBlendData;
-	//	AnimationBlendBehaviour& fetch = myBlends[(int)OperationType::eFetch];
-	//	AnimationBlendBehaviour& lerp = myBlends[(int)OperationType::eFetch];
-	//	AnimationBlendBehaviour& partial = myBlends[(int)OperationType::eFetch];
-	//
-	//
-	//	AnimationBlendNode currOutNode;
-	//	if (fetch.myEnabled)
-	//	{
-	//		size_t fetchIdx = aBD.myFetchSize;
-	//		if(!fetch.myHasUpdated)
-	//			aBD.myFetchOperations[fetchIdx].myTimer = 0;
-	//		aBD.myFetchOperations[fetchIdx].myAnimation = myMappedAnimations[fetch.myMappedAnimation].myAnimation;
-	//
-	//		aBD.myFetchSize++;
-	//
-	//		currOutNode.myDataIndex = fetchIdx;
-	//		currOutNode.myDataIndex = AnimBlendOperationType::eFetchAnimation;
-	//	}
-	//	if (lerp.myEnabled)
-	//	{
-	//		size_t fetchIdx = aBD.myFetchSize;
-	//		size_t lerpIdx = aBD.myInterpSize;
-	//
-	//		if (!lerp.myHasUpdated)
-	//			aBD.myFetchOperations[fetchIdx].myTimer = 0;
-	//		aBD.myFetchOperations[fetchIdx].myAnimation = myMappedAnimations[lerp.myMappedAnimation].myAnimation;
-	//
-	//		aBD.myInterpOperations[lerpIdx].myNodes[0]				= currOutNode;
-	//		aBD.myInterpOperations[lerpIdx].myNodes[1].myDataIndex	= fetchIdx;
-	//		aBD.myInterpOperations[lerpIdx].myNodes[1].myType		= AnimBlendOperationType::eFetchAnimation;
-	//		aBD.myInterpOperations[lerpIdx].myInterpID.myDataIndex	= 0;
-	//		aBD.myInterpOperations[lerpIdx].myInterpID.myType		= InterpolationType::eLinear;
-	//		
-	//		myAnimBlend->myAnimationBlendData.myInterpLinear[0].mySpeed = lerp.myInterpSpeed;
-	//		myAnimBlend->myAnimationBlendData.myInterpLinear[0].myTimer = 0; 
-	//
-	//		aBD.myFetchSize++;
-	//		aBD.myInterpSize++;
-	//
-	//		currOutNode.myDataIndex = lerpIdx;
-	//		currOutNode.myDataIndex = AnimBlendOperationType::eInterpolate;
-	//	}
-	//	if (partial.myEnabled)
-	//	{
-	//		size_t fetchIdx = aBD.myFetchSize;
-	//		size_t partIdx = aBD.myPartialSize; 
-	//
-	//		if (!partial.myHasUpdated)
-	//			aBD.myFetchOperations[fetchIdx].myTimer = 0;
-	//		aBD.myFetchOperations[fetchIdx].myAnimation = myMappedAnimations[partial.myMappedAnimation].myAnimation;
-	//
-	//		aBD.myPartialOperationData[partIdx].myDeviderID			= partial.myJointID;
-	//		aBD.myPartialOperationData[partIdx].myPartialInfluence	= partial.myPartialInfl;
-	//
-	//		aBD.myPartialOperationData[partIdx].myNodes[0]				= currOutNode;
-	//		aBD.myPartialOperationData[partIdx].myNodes[1].myDataIndex	= fetchIdx;
-	//		aBD.myPartialOperationData[partIdx].myNodes[1].myType		= AnimBlendOperationType::eFetchAnimation;
-	//	
-	//		aBD.myFetchSize++;
-	//		aBD.myPartialSize++;
-	//
-	//		currOutNode.myDataIndex = partIdx;
-	//		currOutNode.myDataIndex = AnimBlendOperationType::ePartial;
-	//	}
-	//
-	//	myAnimBlend->myAnimationBlendData.myRootNode = currOutNode;
-	//}
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::BlendSetFetchOp(MapType aMapType)
+	{
+		if (myAnimBlend == nullptr || myAnimator == nullptr || aMapType == myFetchMap)
+			return;
+	
+		if (myBlends[(int)OperationType::eFetch].myEnabled)
+		{
+			AnimationBehaviour cB = myMappedAnimations[myCurrentMapValue];
+			AnimationBehaviour nB = myMappedAnimations[aMapType]; 
+	
+			if (cB.myOverrideValue <= nB.myAnimationValue)
+				ForceBlendSetFetchOp(aMapType);
+			return;
+		}
+	
+		ForceBlendSetFetchOp(aMapType);
+	}
 
 	template<typename MapType>
-	inline void AnimationHelper<MapType>::ForcePlay(MapType aMapValue) 
+	inline void ISTE::AnimationHelper<MapType>::ForceBlendSetFetchOp(MapType aMapType)
+	{
+		myFetchMap = aMapType;
+		const auto& aB = myMappedAnimations[aMapType];
+		myAnimator->myAnimationState = AnimationState::ePlaying;
+		myAnimator->myLoopingFlag = (aB.myAnimationFlag & AH_LOOPING) > 0;
+		 
+		myBlends[(int)OperationType::eFetch].myMappedAnimation = aMapType;
+		myBlends[(int)OperationType::eFetch].myHasUpdated = false;
+
+		myBlends[(int)OperationType::eFetch].myEnabled = true; 
+	
+		RecalculateBlends();
+	}
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::BlendSetInterpOp(MapType aMapType, float aInterpSpeed)
+	{
+		if (myAnimBlend == nullptr || myAnimator == nullptr || aMapType == myLerpMap)
+			return;
+
+		if (myBlends[(int)OperationType::eLerp].myEnabled)
+		{
+			AnimationBehaviour cB = myMappedAnimations[myLerpMap];
+			AnimationBehaviour nB = myMappedAnimations[aMapType];
+
+			if (cB.myOverrideValue <= nB.myAnimationValue)
+				ForceBlendSetInterpOp(aMapType, aInterpSpeed);
+			return;
+		}
+
+		ForceBlendSetInterpOp(aMapType, aInterpSpeed);
+	}
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::ForceBlendSetInterpOp(MapType aMapType, float aInterpSpeed)
+	{
+		myLerpMap = aMapType;
+		myBlends[(int)OperationType::eLerp].myMappedAnimation	= aMapType;
+		myBlends[(int)OperationType::eLerp].myInterpSpeed		= aInterpSpeed;
+		myBlends[(int)OperationType::eLerp].myHasUpdated		= false;
+		myBlends[(int)OperationType::eLerp].myEnabled			= true;
+
+		Animation* anim = Context::Get()->myAnimationManager->GetAnimation(myMappedAnimations[aMapType].myAnimation);
+		myLocalLerpTimer.SetDuration(1 / aInterpSpeed);
+		myLocalLerpTimer.SetCallback([this, aMapType]() {
+			AnimationBlendData& aBD = myAnimBlend->myAnimationBlendData;
+			myBlends[(int)OperationType::eLerp].myEnabled		= false;
+			myBlends[(int)OperationType::eLerp].myHasUpdated	= false;
+			myBlends[(int)OperationType::eFetch].myEnabled		= true;
+			myBlends[(int)OperationType::eFetch].myHasUpdated	= true;
+			ForceBlendSetFetchOp(aMapType); 
+			aBD.myFetchOperations[0] = aBD.myFetchOperations[1];
+			RecalculateBlends();
+			});
+
+		myLocalLerpTimer.SetOn(true);
+		RecalculateBlends();
+	}
+
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::BlendSetPartialOp(MapType aMapType, size_t aBoneIndex, float anInfluece)
+	{
+		if (myAnimBlend == nullptr || myAnimator == nullptr)
+			return;
+
+		if (myBlends[(int)OperationType::eLerp].myEnabled)
+		{
+			AnimationBehaviour cB = myMappedAnimations[myPartMap];
+			AnimationBehaviour nB = myMappedAnimations[aMapType];
+
+			if (cB.myOverrideValue <= nB.myAnimationValue)
+				ForceBlendSetPartialOp(aMapType, aBoneIndex, anInfluece);
+			return;
+		}
+
+		ForceBlendSetPartialOp(aMapType, aBoneIndex, anInfluece);
+	}
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::ForceBlendSetPartialOp(MapType aMapType, size_t aBoneIndex, float anInfluece)
+	{
+		myPartMap = aMapType;
+		myBlends[(int)OperationType::ePartial].myMappedAnimation = aMapType;
+		myBlends[(int)OperationType::ePartial].myPartialInfl = anInfluece;
+		myBlends[(int)OperationType::ePartial].myJointID = aBoneIndex;
+		myBlends[(int)OperationType::ePartial].myHasUpdated = false;
+		myBlends[(int)OperationType::ePartial].myEnabled = true;
+		const auto& aB = myMappedAnimations[aMapType];
+
+		Animation* anim = Context::Get()->myAnimationManager->GetAnimation(aB.myAnimation);
+		myLocalPartialTimer.SetDuration(anim->myLengthInSeconds / aB.mySpeed);
+		myLocalPartialTimer.SetCallback([this]() {
+			myBlends[(int)OperationType::ePartial].myEnabled = false;
+			myBlends[(int)OperationType::ePartial].myHasUpdated = false;  
+			RecalculateBlends();
+			});
+
+		myLocalPartialTimer.SetOn(true);
+		RecalculateBlends();
+	}
+
+
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::RecalculateBlends()
+	{
+		AnimationBlendData& aBD = myAnimBlend->myAnimationBlendData;
+		AnimationBlendBehaviour& fetch = myBlends[(int)OperationType::eFetch];
+		AnimationBlendBehaviour& lerp = myBlends[(int)OperationType::eLerp];
+		AnimationBlendBehaviour& partial = myBlends[(int)OperationType::ePartial];
+	
+	
+		AnimationBlendNode currOutNode;
+		if (fetch.myEnabled)
+		{
+			size_t fetchIdx = aBD.myFetchSize;
+			if (!fetch.myHasUpdated)
+			{
+				aBD.myFetchOperations[0].myTimer = 0;
+				fetch.myHasUpdated = true;
+			}
+			aBD.myFetchOperations[0].myAnimation = myMappedAnimations[fetch.myMappedAnimation].myAnimation;
+			aBD.myFetchOperations[0].mySpeed = myMappedAnimations[fetch.myMappedAnimation].mySpeed;
+
+			aBD.myFetchSize = 1;
+	
+			currOutNode.myDataIndex = 0;
+			currOutNode.myType = AnimBlendOperationType::eFetchAnimation;
+		}
+		if (lerp.myEnabled)
+		{
+			if (!lerp.myHasUpdated)
+			{
+				aBD.myFetchOperations[1].myTimer = 0;
+				myAnimBlend->myAnimationBlendData.myInterpLinear[0].myTimer = 0;
+				lerp.myHasUpdated = true;
+			}
+			aBD.myFetchOperations[1].myAnimation = myMappedAnimations[lerp.myMappedAnimation].myAnimation;
+			aBD.myFetchOperations[1].mySpeed	 = myMappedAnimations[lerp.myMappedAnimation].mySpeed;
+	
+			aBD.myInterpOperations[0].myNodes[0]				= currOutNode;
+			aBD.myInterpOperations[0].myNodes[1].myDataIndex	= 1;
+			aBD.myInterpOperations[0].myNodes[1].myType			= AnimBlendOperationType::eFetchAnimation;
+			aBD.myInterpOperations[0].myInterpID.myDataIndex	= 0;
+			aBD.myInterpOperations[0].myInterpID.myType			= InterpolationType::eLinear;
+			
+			myAnimBlend->myAnimationBlendData.myInterpLinear[0].mySpeed = lerp.myInterpSpeed;
+	
+			aBD.myFetchSize = 2; 
+	
+			currOutNode.myDataIndex = 0;
+			currOutNode.myType = AnimBlendOperationType::eInterpolate;
+		}
+		if (partial.myEnabled)
+		{
+			size_t fetchIdx = aBD.myFetchSize;
+			size_t partIdx = aBD.myPartialSize; 
+	
+			if (!partial.myHasUpdated)
+			{
+				aBD.myFetchOperations[2].myTimer = 0;
+				partial.myHasUpdated = true;
+			}
+			aBD.myFetchOperations[2].myAnimation	= myMappedAnimations[partial.myMappedAnimation].myAnimation;
+			aBD.myFetchOperations[2].mySpeed		= myMappedAnimations[partial.myMappedAnimation].mySpeed;
+	
+			aBD.myPartialOperationData[0].myDeviderID			= partial.myJointID;
+			aBD.myPartialOperationData[0].myPartialInfluence	= partial.myPartialInfl;
+	
+			aBD.myPartialOperationData[0].myNodes[0]				= currOutNode;
+			aBD.myPartialOperationData[0].myNodes[1].myDataIndex	= 2;
+			aBD.myPartialOperationData[0].myNodes[1].myType			= AnimBlendOperationType::eFetchAnimation;
+
+			aBD.myFetchSize = 3; 
+	
+			currOutNode.myDataIndex = 0;
+			currOutNode.myType = AnimBlendOperationType::ePartial;
+		}
+	
+		myAnimBlend->myAnimationBlendData.myRootNode = currOutNode;
+	}
+
+	template<typename MapType>
+	inline void ISTE::AnimationHelper<MapType>::ForcePlay(MapType aMapValue) 
 	{
 		if (myAnimator == nullptr)
 			return;
@@ -453,7 +579,8 @@ namespace ISTE
 	template<typename MapType>
 	inline void AnimationHelper<MapType>::Update()
 	{  
-		myLocalCountDown.Update(Context::Get()->myTimeHandler->GetDeltaTime());
+		myLocalLerpTimer.Update(Context::Get()->myTimeHandler->GetDeltaTime());
+		myLocalPartialTimer.Update(Context::Get()->myTimeHandler->GetDeltaTime());
 		//empty
 	}
-}
+};

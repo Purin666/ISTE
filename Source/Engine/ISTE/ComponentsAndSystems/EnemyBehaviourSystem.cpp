@@ -55,12 +55,12 @@ bool RayAABB(const ISTE::ScreenHelper::Ray& aRay, const Box& aBox)
 
 void ISTE::EnemyBehaviourSystem::UpdateHealthBarDrawCalls()
 {
+
 	Scene& scene = Context::Get()->mySceneHandler->GetActiveScene();
 
 	SpriteDrawerSystem* sds				= Context::Get()->mySystemManager->GetSystem<SpriteDrawerSystem>();
 	ComponentPool& transformPool		= scene.GetComponentPool<TransformComponent>();
 	ComponentPool& eSCP					= scene.GetComponentPool<EnemyStatsComponent>();
-	ComponentPool& behaviourPool		= scene.GetComponentPool<IdleEnemyBehaviour>();
 
 	TransformComponent*		transform	= nullptr; 
 	EnemyStatsComponent*	eSC			= nullptr;
@@ -78,9 +78,7 @@ void ISTE::EnemyBehaviourSystem::UpdateHealthBarDrawCalls()
 		if (eSC == nullptr)
 			continue;
 		bc.myTransform.GetTranslationV3() = transform->myCachedTransform.GetTranslationV3();
-		bc.myTransform.GetTranslationV3().y += 2.f;
-		if (eSC->myIsElite)
-			bc.myTransform.GetTranslationV3().y += 0.5f;
+		bc.myTransform.GetTranslationV3().y += 2;
 		bc.myTransform.GetUp() *= 0.075f;
 		bc.myTransform.GetRight() *= (max(eSC->myHealth,0) / eSC->myMaxHealth);
 		if (eSC->myHealth < eSC->myMaxHealth)
