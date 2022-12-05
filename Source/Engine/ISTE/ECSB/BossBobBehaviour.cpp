@@ -1240,6 +1240,7 @@ void ISTE::BossBobBehaviour::SpawnLurker(int aStage)
 	// Create attack entity.
 	EntityID lurkerID = myActiveScene->NewEntity();
 
+	myActiveScene->SetEntityName(lurkerID, "SpawnedLurker with id " + std::to_string(lurkerID));
 	// Assign all components
 	TransformComponent* lurkerTransform = myActiveScene->AssignComponent<TransformComponent>(lurkerID);
 	myActiveScene->AssignComponent<EnemyStatsComponent>(lurkerID);
