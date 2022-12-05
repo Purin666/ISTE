@@ -1,6 +1,6 @@
 #excluded directories
 .vs/
-.Assets/
+Assets/
 Intermediate/
 Local/
 packages/
