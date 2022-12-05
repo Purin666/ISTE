@@ -75,6 +75,7 @@ namespace ISTE
 
 		inline AssetsManager& GetAssetsManager() { return myAssetsManager; }
 		inline ImGuiInterface& GetImGuiInterface() { return myImGuiInterface; }
+		inline std::vector<AbstractTool*>& GetTools() { return myTools; }
 
 	private:
 		EditorContext myEditorContext;
