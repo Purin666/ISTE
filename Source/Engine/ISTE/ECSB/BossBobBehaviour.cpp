@@ -895,7 +895,10 @@ void ISTE::BossBobBehaviour::DoStabAndStuck(float aDeltaTime)
 	// This is all stab stuff below.
 	{
 		if (!myStabAndStuckData[myStage].AnimationPlayed)
+		{
+			myActiveScene->GetComponent<AudioSource>(myHostId)->Play(7);
 			myAnimationHelper.Play(BossAnimations::eStabs);
+		}
 
 		if (myStabAndStuckData[myStage].StabsLeft == 0) // Uh oh, it's heading time. (Not sorry)
 		{
@@ -1201,6 +1204,9 @@ void ISTE::BossBobBehaviour::DoRoarHelp(float aDeltaTime)
 	spawnDurationTimer.duration = duration;
 	spawnDurationTimer.callback = [this, copy = myStage]()
 	{
+		if (myStats->myIsDead)
+			return;
+
 		myAnimationHelper.Play(BossAnimations::eIdle);
 		ResetRoarHelp(copy);
 		myDoingAnAttack = false;
