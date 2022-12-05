@@ -123,5 +123,5 @@ ClientBin/
 orleans.codegen.cs 
 *.sln  
 Bin/*.dll 
-Bin/*.dll 
+Bin/*.exe 
 Bin/*.lib
