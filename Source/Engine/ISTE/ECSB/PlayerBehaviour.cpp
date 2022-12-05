@@ -216,8 +216,10 @@ bool CanAttack(const CU::Vec3f& aPos, const CU::Vec3f& aOtherPos)
 			CU::Box3D tempBox;
 			tempBox.myMin = CU::Vec4f(recalcedMin.x, recalcedMin.y, recalcedMin.z, 1) * entityTransform->myCachedTransform;
 			tempBox.myMax = CU::Vec4f(recalcedMax.x, recalcedMax.y, recalcedMax.z, 1) * entityTransform->myCachedTransform;
+#ifdef _DEBUG
 			DrawBox(tempBox);
 			std::cout << scene.GetEntity(entity).myName << std::endl;
+#endif // _DEBUG
 			//
 			return false;
 		}
