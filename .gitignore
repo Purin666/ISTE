@@ -122,3 +122,15 @@ ClientBin/
 *.publishsettings
 orleans.codegen.cs
 
+Launcher.sln
+Editor.sln
+Bin/assimp.dll
+Bin/assimpd.dll
+Bin/Editor_Debug.exe
+Bin/Editor_Release.exe
+Bin/fmod.dll
+Bin/fmodL.dll
+Bin/fmodstudio.dll
+Bin/fmodstudioL.dll
+Bin/Game_Debug.lib
+Bin/Game_Release.lib
