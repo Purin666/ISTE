@@ -1886,7 +1886,7 @@ void ISTE::PlayerBehaviour::Ultimate()
 
 		CountDown ultimateStayTimer;
 		ultimateStayTimer.name = "UltimateAttackStayTimer";
-		ultimateStayTimer.duration = 1.5f; // I assume attacks match invincibility time to only occur once.
+		ultimateStayTimer.duration = 1.f; // I assume attacks match invincibility time to only occur once.
 		ultimateStayTimer.callback = [attackId = myAttacksIds["Ultimate"]]() {
 			Context::Get()->mySceneHandler->GetActiveScene().DestroyEntity(attackId);
 			//Context::Get()->myVFXHandler->DeactivateVFX(vfx);
